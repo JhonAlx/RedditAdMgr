@@ -1,12 +1,91 @@
-﻿<Window x:Class="RedditAdMgr.MainForm"
+﻿<Controls:MetroWindow xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"   x:Class="RedditAdMgr.MainForm"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:RedditAdMgr"
-        mc:Ignorable="d"
-        Title="MainForm" Height="300" Width="300">
+        xmlns:Controls="http://metro.mahapps.com/winfx/xaml/controls" 
+        Title="Reddit Ad Manager" Height="500" Width="600" IsMaxRestoreButtonEnabled="False" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
     <Grid>
-        
+        <Grid.RowDefinitions>
+            <RowDefinition Height="180"></RowDefinition>
+            <RowDefinition Height="250"></RowDefinition>
+            <RowDefinition></RowDefinition>
+        </Grid.RowDefinitions>
+        <Grid Grid.Row="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="50"></RowDefinition>
+                <RowDefinition Height="50"></RowDefinition>
+                <RowDefinition Height="80"></RowDefinition>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="105"></ColumnDefinition>
+                    <ColumnDefinition Width="350"></ColumnDefinition>
+                    <ColumnDefinition></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <Grid Grid.Column="0">
+                    <Label Content="Image directory" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="5, 5, 0, 5" FontSize="12" />
+                </Grid>
+                <Grid Grid.Column="1">
+                    <TextBox Name="ImagePathTextBox" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10, 10, 10, 10" Width="330" Height="20"/>
+                </Grid>
+                <Grid Grid.Column="2">
+                    <Button Name="ImageExplorerButton" Content="Search image's path" HorizontalAlignment="Center"  VerticalAlignment="Center" Height="20" Width="130" Style="{DynamicResource SquareButtonStyle}" Click="ImageExplorerButton_Click"/>
+                </Grid>
+            </Grid>
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="105"></ColumnDefinition>
+                    <ColumnDefinition Width="350"></ColumnDefinition>
+                    <ColumnDefinition></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <Grid Grid.Column="0">
+                    <Label Content="Excel path" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="5, 5, 0, 5" FontSize="12" />
+                </Grid>
+                <Grid Grid.Column="1">
+                    <TextBox Name="ExcelPathTextBox" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10, 10, 10, 10" Width="330" Height="20" />
+                </Grid>
+                <Grid Grid.Column="2">
+                    <Button Name="ExcelExplorerButton" Content="Search Excel" HorizontalAlignment="Center"  VerticalAlignment="Center" Height="20" Width="130" Style="{DynamicResource SquareButtonStyle}" Click="ExcelExplorerButton_Click" />
+                </Grid>
+            </Grid>
+            <Grid Grid.Row="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition></RowDefinition>
+                    <RowDefinition></RowDefinition>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0">
+                    <Button Name="ImportExcelButton" Content="Import data from Excel" HorizontalAlignment="Center"  VerticalAlignment="Center" Height="20" Width="140" Style="{DynamicResource SquareButtonStyle}" Click="ImportExcelButton_Click" />
+                </Grid>
+                <Grid Grid.Row="1">
+                    <Button Name="BeginCreationButton" Content="Begin!" HorizontalAlignment="Center"  VerticalAlignment="Center" Height="20" Width="130" Style="{DynamicResource SquareButtonStyle}" />
+                </Grid>
+            </Grid>
+        </Grid>
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="220"></RowDefinition>
+                <RowDefinition></RowDefinition>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0">
+                <TextBlock Name="StatusTextBlock" Width="550" Height="220">
+                    <Border BorderThickness="1" BorderBrush="Black" Height="220" Width="550" ></Border>
+                </TextBlock>
+            </Grid>
+            <Grid Grid.Row="1">
+                <ProgressBar Name="GeneralProgressBar" Width="180" />
+            </Grid>
+
+        </Grid>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition></ColumnDefinition>
+                <ColumnDefinition></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0">
+                <Label Content="Delay" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="5, 5, 0, 5" FontSize="12"/>
+            </Grid>
+            <Grid Grid.Column="1">
+                <xctk:IntegerUpDown HorizontalAlignment="Left" VerticalAlignment="Center" Width="100" Height="30" Minimum="0" DefaultValue="0" />
+            </Grid>
+        </Grid>
     </Grid>
-</Window>
+</Controls:MetroWindow>

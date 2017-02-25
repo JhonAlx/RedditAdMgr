@@ -14,7 +14,7 @@ namespace RedditAdMgr
     /// </summary>
     public partial class LoginWindow : MetroWindow
     {
-        public CookieContainer cookies { get; set; }
+        internal CookieContainer cookies { get; set; }
 
         public LoginWindow()
         {
@@ -53,13 +53,26 @@ namespace RedditAdMgr
 
                        if (c.Contains("reddit_session"))
                        {
-                           MessageBox.Show("Logged in!", "Success");
+                           MessageBoxResult result = MessageBox.Show("Logged in!", "Success", MessageBoxButton.OK);
+
+                           cookies = new CookieContainer();
+
+                           cookies.SetCookies(new Uri("http://reddit.com"), c);
 
                            if (RememberPasswordCheckBox.IsChecked == true)
                            {
                                Properties.Settings.Default.Username = username;
-                               Properties.Settings.Default.Password = password;
+                               Properties.Settings.Default.Password = password; //TODO: Encrypt this shit
                                Properties.Settings.Default.Save();
+                           }
+
+                           if (result == MessageBoxResult.OK)
+                           {
+                               MainForm main = new MainForm();
+                               main.Cookies = cookies;
+                               App.Current.MainWindow = main;
+                               Close();
+                               main.Show();
                            }
                        }
                        else
