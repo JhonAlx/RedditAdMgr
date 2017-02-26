@@ -56,7 +56,7 @@
                     <Button Name="ImportExcelButton" Content="Import data from Excel" HorizontalAlignment="Center"  VerticalAlignment="Center" Height="20" Width="140" Style="{DynamicResource SquareButtonStyle}" Click="ImportExcelButton_Click" />
                 </Grid>
                 <Grid Grid.Row="1">
-                    <Button Name="BeginCreationButton" Content="Begin!" HorizontalAlignment="Center"  VerticalAlignment="Center" Height="20" Width="130" Style="{DynamicResource SquareButtonStyle}" />
+                    <Button Name="BeginCreationButton" Content="Begin!" HorizontalAlignment="Center"  VerticalAlignment="Center" Height="20" Width="130" Style="{DynamicResource SquareButtonStyle}" Click="BeginCreationButton_Click" />
                 </Grid>
             </Grid>
         </Grid>
@@ -66,9 +66,7 @@
                 <RowDefinition></RowDefinition>
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
-                <TextBlock Name="StatusTextBlock" Width="550" Height="220">
-                    <Border BorderThickness="1" BorderBrush="Black" Height="220" Width="550" ></Border>
-                </TextBlock>
+                <TextBox Name="StatusTextBlock" Width="550" Height="220" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" BorderThickness="1" BorderBrush="Black" IsReadOnly="True"></TextBox>
             </Grid>
             <Grid Grid.Row="1">
                 <ProgressBar Name="GeneralProgressBar" Width="180" />

@@ -23,6 +23,9 @@ namespace RedditAdMgr
             LoginProgressBar.Visibility = Visibility.Hidden;
             UserNameTextBox.Text = Properties.Settings.Default.Username;
             PasswordTextBox.Password = Properties.Settings.Default.Password;
+
+            if (!string.IsNullOrEmpty(Properties.Settings.Default.Username) && !string.IsNullOrEmpty(Properties.Settings.Default.Password))
+                RememberPasswordCheckBox.IsChecked = true;
         }
 
         private void SubmitButton_Click(object sender, RoutedEventArgs e)
