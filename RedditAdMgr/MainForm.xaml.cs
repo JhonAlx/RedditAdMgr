@@ -10,9 +10,11 @@ using System.Collections.Generic;
 using RedditAdMgr.Model;
 using System.Linq;
 using System;
-using System.Threading;
 using HtmlAgilityPack;
 using System.Text;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System.Globalization;
 
 namespace RedditAdMgr
 {
@@ -28,8 +30,11 @@ namespace RedditAdMgr
         public MainForm()
         {
             InitializeComponent();
+
             BeginCreationButton.IsEnabled = false;
             GeneralProgressBar.Visibility = Visibility.Hidden;
+            DelayPicker.Value = 1000;
+
         }
 
         private void ImageExplorerButton_Click(object sender, RoutedEventArgs e)
@@ -62,7 +67,7 @@ namespace RedditAdMgr
                 GeneralProgressBar.Visibility = Visibility.Visible;
                 GeneralProgressBar.IsIndeterminate = true;
 
-                Log("INFO", string.Format("Loading file {0}",FileInfo.Name));
+                Log("INFO", string.Format("Loading file {0}", FileInfo.Name));
 
                 Task readData = Task.Factory.StartNew(() => ReadExcelFile(path));
 
@@ -70,7 +75,7 @@ namespace RedditAdMgr
                 {
                     readData.Wait();
                 }
-                catch(AggregateException ae)
+                catch (AggregateException ae)
                 {
                     ae.Handle((x) =>
                     {
@@ -104,7 +109,7 @@ namespace RedditAdMgr
         {
             string status = string.Empty;
 
-            switch(type)
+            switch (type)
             {
                 case "INFO":
 
@@ -183,7 +188,7 @@ namespace RedditAdMgr
                 ExcelWorksheet ws = null;
 
                 ws = pck.Workbook.Worksheets[worksheetName];
-                
+
                 DataTable tbl = new DataTable();
 
                 foreach (var firstRowCell in ws.Cells[1, 1, 1, ws.Dimension.End.Column])
@@ -211,91 +216,90 @@ namespace RedditAdMgr
         {
             Log("INFO", "Beggining ad creation");
             GeneralProgressBar.Visibility = Visibility.Visible;
-            foreach(var ad in ads)
+
+            foreach (var ad in ads)
             {
                 string adUh = string.Empty;
                 string errorMsg = string.Empty;
                 bool error = false;
-
-                //Task<string> uhFetch = Task<string>.Factory.StartNew(() => GetUhForAdvert());
-                Task task = Task.Factory.StartNew(() =>
-                {
-                    HttpWebRequest newPromoRequest = WebRequest.Create("https://www.reddit.com/promoted/new_promo/") as HttpWebRequest;
-                    newPromoRequest.CookieContainer = Cookies;
-                    newPromoRequest.Method = "GET";
-                    newPromoRequest.Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8";
-                    string uh = string.Empty;
-
-                    HttpWebResponse response = (HttpWebResponse)newPromoRequest.GetResponse();
-
-                    if (response.StatusCode == HttpStatusCode.OK)
-                    {
-                        using (Stream s = response.GetResponseStream())
-                        {
-                            using (StreamReader sr = new StreamReader(s, Encoding.GetEncoding(response.CharacterSet)))
-                            {
-                                HtmlDocument doc = new HtmlDocument();
-
-                                doc.Load(sr);
-
-                                adUh = doc.DocumentNode.SelectNodes("//form")[0].SelectNodes("//input")[0].Attributes[2].Value;
-                            }
-                        }
-                    }
-
-                    string postString = string.Format("uh={0}&id=%23promo-form&title={1}&kind=link&url={2}&thing_id=&text=&renderstyle=html", adUh, ad.Title, ad.Url);
-                    string adUrl = "https://www.reddit.com/api/create_promo";
-
-                    if (ad.SendComments)
-                        postString += "&sendreplies=on";
-
-                    if (ad.DisableComments)
-                        postString += "&disable_comments=on";
-
-                    HttpWebRequest promoRequest = WebRequest.Create(adUrl) as HttpWebRequest;
-                    promoRequest.ContentType = "application/x-www-form-urlencoded; charset=UTF-8";
-                    promoRequest.Method = "POST";
-                    promoRequest.CookieContainer = Cookies;
-                    promoRequest.Accept = "application/json, text/javascript, */*; q=0.01";
-                    promoRequest.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
-                    promoRequest.UserAgent = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36";
-                    promoRequest.Referer = "https://www.reddit.com/";
-                    
-                    WebHeaderCollection customHeaders = promoRequest.Headers;
-
-                    customHeaders.Add("accept-language", "en;q=0.4");
-                    customHeaders.Add("origin", "https://www.reddit.com");
-                    customHeaders.Add("x-requested-with", "XMLHttpRequest");
-
-                    byte[] bytes = Encoding.ASCII.GetBytes(postString);
-
-                    promoRequest.ContentLength = bytes.Length;
-
-                    using (Stream os = promoRequest.GetRequestStream())
-                    {
-                        os.Write(bytes, 0, bytes.Length);
-                    }
-
-                    //"your message has been delivered"
-
-                    HttpWebResponse promoResponse = promoRequest.GetResponse() as HttpWebResponse;
-
-
-                    if (promoResponse.StatusCode == HttpStatusCode.OK)
-                    {
-                        using (Stream s = promoResponse.GetResponseStream())
-                        {
-                            using (StreamReader sr = new StreamReader(s, Encoding.GetEncoding(promoResponse.CharacterSet)))
-                            {
-                                if (sr.ReadToEnd().Contains("your message has been delivered"))
-                                    Log("INFO", string.Format("Ad #{0} successfully created", ad.AdvertisementNumber));
-                            }
-                        }
-                    }
-                });
+                RedditAdJson result = new RedditAdJson();
 
                 try
                 {
+                    Task task = Task.Factory.StartNew(() =>
+                    {
+                        HttpWebRequest newPromoRequest = WebRequest.Create("https://www.reddit.com/promoted/new_promo/") as HttpWebRequest;
+                        newPromoRequest.CookieContainer = Cookies;
+                        newPromoRequest.Method = "GET";
+                        newPromoRequest.Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8";
+                        string uh = string.Empty;
+
+                        HttpWebResponse response = (HttpWebResponse)newPromoRequest.GetResponse();
+
+                        if (response.StatusCode == HttpStatusCode.OK)
+                        {
+                            using (Stream s = response.GetResponseStream())
+                            {
+                                using (StreamReader sr = new StreamReader(s, Encoding.GetEncoding(response.CharacterSet)))
+                                {
+                                    HtmlDocument doc = new HtmlDocument();
+
+                                    doc.Load(sr);
+
+                                    adUh = doc.DocumentNode.SelectNodes("//form")[0].SelectNodes("//input")[0].Attributes[2].Value;
+                                }
+                            }
+                        }
+
+                        string postString = string.Format("uh={0}&id=%23promo-form&title={1}&kind=link&url={2}&thing_id=&text=&renderstyle=html", adUh, ad.Title, ad.Url);
+                        string adUrl = "https://www.reddit.com/api/create_promo";
+
+                        if (ad.SendComments)
+                            postString += "&sendreplies=on";
+
+                        if (ad.DisableComments)
+                            postString += "&disable_comments=on";
+
+                        HttpWebRequest promoRequest = WebRequest.Create(adUrl) as HttpWebRequest;
+                        promoRequest.ContentType = "application/x-www-form-urlencoded; charset=UTF-8";
+                        promoRequest.Method = "POST";
+                        promoRequest.CookieContainer = Cookies;
+                        promoRequest.Accept = "application/json, text/javascript, */*; q=0.01";
+                        promoRequest.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+                        promoRequest.UserAgent = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36";
+                        promoRequest.Referer = "https://www.reddit.com/";
+
+                        WebHeaderCollection customHeaders = promoRequest.Headers;
+
+                        customHeaders.Add("accept-language", "en;q=0.4");
+                        customHeaders.Add("origin", "https://www.reddit.com");
+                        customHeaders.Add("x-requested-with", "XMLHttpRequest");
+
+                        byte[] bytes = Encoding.ASCII.GetBytes(postString);
+
+                        promoRequest.ContentLength = bytes.Length;
+
+                        using (Stream os = promoRequest.GetRequestStream())
+                        {
+                            os.Write(bytes, 0, bytes.Length);
+                        }
+
+                        HttpWebResponse promoResponse = promoRequest.GetResponse() as HttpWebResponse;
+
+
+                        if (promoResponse.StatusCode == HttpStatusCode.OK)
+                        {
+                            using (Stream s = promoResponse.GetResponseStream())
+                            {
+                                using (StreamReader sr = new StreamReader(s, Encoding.GetEncoding(promoResponse.CharacterSet)))
+                                {
+                                    result = JsonConvert.DeserializeObject<RedditAdJson>(sr.ReadToEnd());
+                                }
+                            }
+                        }
+                    });
+
+
                     await task;
                 }
                 catch (AggregateException ae)
@@ -313,40 +317,165 @@ namespace RedditAdMgr
                 {
                     Log("ERROR", errorMsg);
                 }
-
-                Log("INFO", adUh);
-                //adUh = uhFetch.Result;
-
-            //    //uh = 5xladjq2rzdb809b37a0dd4580c3afbb17284b81106662be19 & id =% 23promo - form & title = alidsuhalsisdlasd & kind = link & url = test.com & thing_id = &text = &disable_comments = on & sendreplies = on & renderstyle = html
-            }
-        }
-
-        private string GetUhForAdvert()
-        {
-            HttpWebRequest newPromoRequest = WebRequest.Create("https://www.reddit.com/promoted/new_promo/") as HttpWebRequest;
-            newPromoRequest.CookieContainer = Cookies;
-            newPromoRequest.Method = "GET";
-            newPromoRequest.Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8";
-            string uh = string.Empty;
-
-            HttpWebResponse newMsgResponse = (HttpWebResponse)newPromoRequest.GetResponse();
-
-            if (newMsgResponse.StatusCode == HttpStatusCode.OK)
-            {
-                using (Stream s = newMsgResponse.GetResponseStream())
+                else
                 {
-                    using (StreamReader sr = new StreamReader(s, Encoding.GetEncoding(newMsgResponse.CharacterSet)))
+                    if (result.success)
                     {
-                        HtmlDocument doc = new HtmlDocument();
-
-                        doc.Load(sr);
-
-                        uh = doc.DocumentNode.SelectNodes("//form")[0].SelectNodes("//input")[0].Attributes[2].Value;
+                        ad.RedditAdId = result.jquery[16][3].ToString().Split('/')[5].Remove(6);
+                        Log("INFO", string.Format("Ad #{0} successfully created ({1})", ad.AdvertisementNumber, ad.RedditAdId));
                     }
                 }
+
+                await Task.Delay(Convert.ToInt32(DelayPicker.Value));
             }
 
-            return uh;
+            Log("INFO", "Finished creating ads!");
+
+            // Update Reddit ad ID on campaigns list
+            foreach(var camp in campaigns)
+                camp.Advertisement.RedditAdId = ads.Where(x => x.AdvertisementNumber == camp.Advertisement.AdvertisementNumber).Select(x => x.RedditAdId).First();
+
+
+            Log("INFO", "Beggining campaign creation");
+
+            foreach(var camp in campaigns)
+            {
+                string campaignUh = string.Empty;
+                string errorMsg = string.Empty;
+                bool error = false;
+                RedditAdJson result = new RedditAdJson();
+
+                try
+                {
+                    Task task = Task.Factory.StartNew(() =>
+                    {
+                        HttpWebRequest newPromoRequest = WebRequest.Create(string.Format("https://www.reddit.com/promoted/edit_promo/{0}", camp.Advertisement.RedditAdId)) as HttpWebRequest;
+                        newPromoRequest.CookieContainer = Cookies;
+                        newPromoRequest.Method = "GET";
+                        newPromoRequest.Accept = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8";
+                        string uh = string.Empty;
+
+                        HttpWebResponse response = (HttpWebResponse)newPromoRequest.GetResponse();
+
+                        if (response.StatusCode == HttpStatusCode.OK)
+                        {
+                            using (Stream s = response.GetResponseStream())
+                            {
+                                using (StreamReader sr = new StreamReader(s, Encoding.GetEncoding(response.CharacterSet)))
+                                {
+                                    HtmlDocument doc = new HtmlDocument();
+
+                                    doc.Load(sr);
+
+                                    campaignUh = doc.DocumentNode.SelectNodes("//form")[0].SelectNodes("//input")[0].Attributes[2].Value;
+                                }
+                            }
+                        }
+
+                        string postString = string.Format("link_id36={0}&targeting=subreddit&sr=&selected_sr_names={1}&country={2}&region={3}&metro=&mobile_os=&platform={4}&undefined={5}&total_budget_dollars={6}&impressions=(7)&startdate={8}&enddate={9}&cost_basis=cpm&bid_dollars={10}&is_new=true&campaign_id36=&campaign_name=&id=%23campaign&uh={11}&renderstyle=html", 
+                            camp.Advertisement.RedditAdId, //0
+                            camp.TargetDetail, //1
+                            camp.Location, //2
+                            camp.Location2, //3
+                            camp.Platform, //4
+                            camp.Start.AddDays(3).ToString("MM/dd/yyyy"), //5
+                            camp.Budget, //6
+                            camp.Budget / 200 * 1000 * 100, //7
+                            camp.Start.ToString("MM/dd/yyyy"), //8
+                            camp.End.ToString("MM/dd/yyyy"), // 9
+                            string.Format(CultureInfo.GetCultureInfo("en-US"), "{0: 0.##}", camp.PricingCPM), //10
+                            campaignUh // 11
+                            );
+
+                        string adUrl = "https://www.reddit.com/api/edit_campaign";
+
+                        if (camp.BudgetOptionDeliverFast)
+                            postString += "&no_daily_budget=on";
+
+                        if (camp.OptionExtend)
+                            postString += "&auto_extend=on";
+
+                        HttpWebRequest campaignRequest = WebRequest.Create(adUrl) as HttpWebRequest;
+                        campaignRequest.ContentType = "application/x-www-form-urlencoded; charset=UTF-8";
+                        campaignRequest.Method = "POST";
+                        campaignRequest.CookieContainer = Cookies;
+                        campaignRequest.Accept = "application/json, text/javascript, */*; q=0.01";
+                        campaignRequest.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+                        campaignRequest.UserAgent = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36";
+                        campaignRequest.Referer = "https://www.reddit.com/";
+
+                        WebHeaderCollection customHeaders = campaignRequest.Headers;
+
+                        customHeaders.Add("accept-language", "en;q=0.4");
+                        customHeaders.Add("origin", "https://www.reddit.com");
+                        customHeaders.Add("x-requested-with", "XMLHttpRequest");
+
+                        byte[] bytes = Encoding.ASCII.GetBytes(postString);
+
+                        campaignRequest.ContentLength = bytes.Length;
+
+                        using (Stream os = campaignRequest.GetRequestStream())
+                        {
+                            os.Write(bytes, 0, bytes.Length);
+                        }
+
+                        HttpWebResponse campaignResponse = campaignRequest.GetResponse() as HttpWebResponse;
+
+
+                        if (campaignResponse.StatusCode == HttpStatusCode.OK)
+                        {
+                            using (Stream s = campaignResponse.GetResponseStream())
+                            {
+                                using (StreamReader sr = new StreamReader(s, Encoding.GetEncoding(campaignResponse.CharacterSet)))
+                                {
+                                    string jsonString = sr.ReadToEnd();
+                                    result = JsonConvert.DeserializeObject<RedditAdJson>(jsonString);
+                                }
+                            }
+                        }
+                    });
+
+
+                    await task;
+                }
+                catch (AggregateException ae)
+                {
+                    ae.Handle((x) =>
+                    {
+                        errorMsg = x.Message + " | " + x.StackTrace;
+                        error = true;
+
+                        return error;
+                    });
+                }
+
+                if (error)
+                {
+                    Log("ERROR", errorMsg);
+                }
+                else
+                {
+                    if (result.success)
+                    {
+                        Log("INFO", string.Format("Campaign for ad ID {0} successfully created ({1})", camp.Advertisement.RedditAdId, campaignUh));
+                    }
+                    else
+                    {
+                        var msg = result.jquery[14][3];
+                        Log("ERROR", string.Format("Error creating campaign for ad ID {0}:{1}", camp.Advertisement.RedditAdId, msg.ToString().Replace(Environment.NewLine, string.Empty).Replace("[", string.Empty).Replace("]", string.Empty).Replace("\"", string.Empty)));
+                    }
+                }
+
+                await Task.Delay(Convert.ToInt32(DelayPicker.Value));
+            }
+
+            GeneralProgressBar.Visibility = Visibility.Hidden;
         }
-}
+    }
+
+    public class RedditAdJson
+    {
+        public List<List<object>> jquery { get; set; }
+        public bool success { get; set; }
+    }
 }

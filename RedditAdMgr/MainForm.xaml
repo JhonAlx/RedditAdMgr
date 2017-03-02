@@ -82,7 +82,7 @@
                 <Label Content="Delay" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="5, 5, 0, 5" FontSize="12"/>
             </Grid>
             <Grid Grid.Column="1">
-                <xctk:IntegerUpDown HorizontalAlignment="Left" VerticalAlignment="Center" Width="100" Height="30" Minimum="0" DefaultValue="0" />
+                <xctk:IntegerUpDown Name="DelayPicker" HorizontalAlignment="Left" VerticalAlignment="Center" Width="100" Height="30" Minimum="1000" DefaultValue="1000" Value="1000" />
             </Grid>
         </Grid>
     </Grid>

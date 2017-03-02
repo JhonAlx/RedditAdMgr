@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Windows;
 using System.Threading.Tasks;
+using RedditAdMgr.Model;
 
 namespace RedditAdMgr
 {
@@ -19,12 +20,24 @@ namespace RedditAdMgr
         public LoginWindow()
         {
             InitializeComponent();
+
+            try
+            {
+                Configuration.Load();
+            }
+            catch (Exception)
+            {
+                Configuration.Default();
+            }
+
+            UserNameTextBox.Text = Configuration.Instance.Username;
+            PasswordTextBox.Password = Configuration.Instance.Password;
+
             LoginProgressLabel.Visibility = Visibility.Hidden;
             LoginProgressBar.Visibility = Visibility.Hidden;
-            UserNameTextBox.Text = Properties.Settings.Default.Username;
-            PasswordTextBox.Password = Properties.Settings.Default.Password;
 
-            if (!string.IsNullOrEmpty(Properties.Settings.Default.Username) && !string.IsNullOrEmpty(Properties.Settings.Default.Password))
+
+            if (!string.IsNullOrEmpty(Configuration.Instance.Username) && !string.IsNullOrEmpty(Configuration.Instance.Password))
                 RememberPasswordCheckBox.IsChecked = true;
         }
 
@@ -64,9 +77,10 @@ namespace RedditAdMgr
 
                            if (RememberPasswordCheckBox.IsChecked == true)
                            {
-                               Properties.Settings.Default.Username = username;
-                               Properties.Settings.Default.Password = password; //TODO: Encrypt this shit
-                               Properties.Settings.Default.Save();
+                               Configuration.Instance.Username = UserNameTextBox.Text;
+                               Configuration.Instance.Password = PasswordTextBox.Password;
+
+                               Configuration.Instance.Save();
                            }
 
                            if (result == MessageBoxResult.OK)
@@ -90,11 +104,6 @@ namespace RedditAdMgr
         {
             string loginUrl = "https://www.reddit.com/api/login/";
             string loginParams = string.Format("op=login&user={0}&passwd={1}&api_type=json", username, password);
-
-            //statusLbl.Visibility = Visibility.Visible;
-            //progressBar.Visibility = Visibility.Visible;
-
-            //statusLbl.Content = "Logging in into Reddit...";
 
             HttpWebRequest loginRequest = WebRequest.Create(loginUrl) as HttpWebRequest;
             loginRequest.ContentType = "application/x-www-form-urlencoded";
