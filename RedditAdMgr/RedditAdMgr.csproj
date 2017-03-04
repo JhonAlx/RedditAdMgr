@@ -123,6 +123,7 @@
     <Compile Include="Model\Campaign.cs" />
     <Compile Include="Model\Configuration.cs" />
     <Compile Include="Settings.cs" />
+    <Compile Include="Utils\FormUpload.cs" />
     <Page Include="LoginWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

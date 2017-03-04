@@ -15,6 +15,7 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Globalization;
+using RedditAdMgr.Utils;
 
 namespace RedditAdMgr
 {
@@ -222,6 +223,7 @@ namespace RedditAdMgr
                 string adUh = string.Empty;
                 string errorMsg = string.Empty;
                 bool error = false;
+                string imgPathText = ImagePathTextBox.Text;
                 RedditAdJson result = new RedditAdJson();
 
                 try
@@ -250,6 +252,83 @@ namespace RedditAdMgr
                                 }
                             }
                         }
+
+                        string adS3PostString = string.Format("kind=thumbnail&link=&filepath={0}&uh={1}&ajax=true&raw_json=1", Uri.EscapeDataString(ad.ThumbnailName), adUh);
+                        string adS3Url = "https://www.reddit.com/api/ad_s3_params.json";
+                        AdS3Json adS3Data = new AdS3Json();
+
+                        HttpWebRequest adS3Request = WebRequest.Create(adS3Url) as HttpWebRequest;
+                        adS3Request.ContentType = "application/x-www-form-urlencoded; charset=UTF-8";
+                        adS3Request.Method = "POST";
+                        adS3Request.CookieContainer = Cookies;
+                        adS3Request.Accept = "application/json, text/javascript, */*; q=0.01";
+                        adS3Request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+                        adS3Request.UserAgent = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36";
+                        adS3Request.Referer = "https://www.reddit.com/";
+
+                        WebHeaderCollection adS3customHeaders = adS3Request.Headers;
+
+                        adS3customHeaders.Add("accept-language", "en;q=0.4");
+                        adS3customHeaders.Add("origin", "https://www.reddit.com");
+                        adS3customHeaders.Add("x-requested-with", "XMLHttpRequest");
+
+                        byte[] adS3Bytes = Encoding.ASCII.GetBytes(adS3PostString);
+
+                        adS3Request.ContentLength = adS3Bytes.Length;
+
+                        using (Stream os = adS3Request.GetRequestStream())
+                        {
+                            os.Write(adS3Bytes, 0, adS3Bytes.Length);
+                        }
+
+                        HttpWebResponse adS3Response = adS3Request.GetResponse() as HttpWebResponse;
+
+
+                        if (adS3Response.StatusCode == HttpStatusCode.OK)
+                        {
+                            using (Stream s = adS3Response.GetResponseStream())
+                            {
+                                using (StreamReader sr = new StreamReader(s, Encoding.GetEncoding(adS3Response.CharacterSet)))
+                                {
+                                    adS3Data = JsonConvert.DeserializeObject<AdS3Json>(sr.ReadToEnd());
+                                }
+                            }
+                        }
+
+                        var imgPath = Path.Combine(imgPathText, ad.ThumbnailName);
+
+                        if (File.Exists(imgPath))
+                        {
+                            using (FileStream fs = new FileStream(imgPath, FileMode.Open, FileAccess.Read))
+                            {
+                                byte[] data = new byte[fs.Length];
+                                fs.Read(data, 0, data.Length);
+
+                                Dictionary<string, object> postParameters = new Dictionary<string, object>();
+
+                                postParameters.Add("acl", "public-read");
+                                postParameters.Add("key", adS3Data.fields[1].value);
+                                postParameters.Add("X-Amz-Credential", adS3Data.fields[2].value);
+                                postParameters.Add("X-Amz-Algorithm", adS3Data.fields[3].value);
+                                postParameters.Add("X-Amz-Date", adS3Data.fields[4].value);
+                                postParameters.Add("success_action_status", adS3Data.fields[5].value);
+                                postParameters.Add("content-type", adS3Data.fields[6].value);
+                                postParameters.Add("x-amz-storage-class", adS3Data.fields[7].value);
+                                postParameters.Add("x-amz-meta-ext", adS3Data.fields[8].value);
+                                postParameters.Add("policy", adS3Data.fields[9].value);
+                                postParameters.Add("X-Amz-Signature", adS3Data.fields[10].value);
+                                postParameters.Add("x-amz-security-token", adS3Data.fields[11].value);
+                                postParameters.Add("file", new FormUpload.FileParameter(data, ad.ThumbnailName, adS3Data.fields[6].value));
+
+                                HttpWebResponse fileUploadResponse = FormUpload.MultipartFormDataPost("https://reddit-client-uploads.s3.amazonaws.com/", adS3Request.UserAgent, postParameters);
+
+                                StreamReader responseReader = new StreamReader(fileUploadResponse.GetResponseStream());
+                                string fullResponse = responseReader.ReadToEnd();
+                                fileUploadResponse.Close();
+                            }
+                        }
+                        else
+                            throw new FileNotFoundException("File does not exist on the specified directory!");
 
                         string postString = string.Format("uh={0}&id=%23promo-form&title={1}&kind=link&url={2}&thing_id=&text=&renderstyle=html", adUh, ad.Title, ad.Url);
                         string adUrl = "https://www.reddit.com/api/create_promo";
@@ -306,8 +385,16 @@ namespace RedditAdMgr
                 {
                     ae.Handle((x) =>
                     {
-                        errorMsg = x.Message + " | " + x.StackTrace;
-                        error = true;
+                        if (x is FileNotFoundException)
+                        {
+                            errorMsg = x.Message;
+                            error = true;
+                        }
+                        else
+                        {
+                            errorMsg = x.Message + " | " + x.StackTrace;
+                            error = true;
+                        }
 
                         return error;
                     });
@@ -470,6 +557,7 @@ namespace RedditAdMgr
             }
 
             GeneralProgressBar.Visibility = Visibility.Hidden;
+            Log("INFO", "Completed");
         }
     }
 
@@ -477,5 +565,17 @@ namespace RedditAdMgr
     {
         public List<List<object>> jquery { get; set; }
         public bool success { get; set; }
+    }
+
+    public class Field
+    {
+        public string name { get; set; }
+        public string value { get; set; }
+    }
+
+    public class AdS3Json
+    {
+        public string action { get; set; }
+        public List<Field> fields { get; set; }
     }
 }
