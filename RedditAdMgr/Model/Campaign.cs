@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RedditAdMgr.Model
 {
-    class Campaign
+    internal class Campaign
     {
         public Advertisement Advertisement { get; set; }
         public string Target { get; set; }
@@ -19,6 +15,6 @@ namespace RedditAdMgr.Model
         public DateTime Start { get; set; }
         public DateTime End { get; set; }
         public bool OptionExtend { get; set; }
-        public decimal PricingCPM { get; set; }
+        public decimal PricingCpm { get; set; }
     }
 }

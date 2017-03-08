@@ -11,23 +11,18 @@ namespace RedditAdMgr.Model
 {
     public class Configuration
     {
-        public string Username;
+        [XmlIgnore] public const string FileName = "Settings.xml";
+
         public string Password;
-
-        private void SetDefaultValues()
-        {
-            this.Username = string.Empty;
-            this.Password = string.Empty;
-        }
-
-        [XmlIgnore]
-        public const string FileName = "Settings.xml";
+        public string Username;
 
         [XmlIgnore]
         public static Configuration Instance { get; private set; }
 
-        public Configuration()
+        private void SetDefaultValues()
         {
+            Username = string.Empty;
+            Password = string.Empty;
         }
 
         public static void Default()
@@ -41,7 +36,9 @@ namespace RedditAdMgr.Model
             var serializer = new XmlSerializer(typeof(Configuration));
 
             using (var fStream = new FileStream(FileName, FileMode.Open))
-                Instance = (Configuration)serializer.Deserialize(fStream);
+            {
+                Instance = (Configuration) serializer.Deserialize(fStream);
+            }
 
             Instance.Password = Instance.Password.DecryptString().ToInsecureString();
         }
@@ -53,24 +50,24 @@ namespace RedditAdMgr.Model
             var serializer = new XmlSerializer(typeof(Configuration));
 
             using (var fStream = new FileStream(FileName, FileMode.Create))
+            {
                 serializer.Serialize(fStream, this);
+            }
         }
     }
 
     public static class SecureIt
     {
-        private static readonly byte[] entropy = Encoding.Unicode.GetBytes("Salt Is Not A Password");
+        private static readonly byte[] Entropy = Encoding.Unicode.GetBytes("Salt Is Not A Password");
 
         public static string EncryptString(this SecureString input)
         {
             if (input == null)
-            {
                 return null;
-            }
 
             var encryptedData = ProtectedData.Protect(
                 Encoding.Unicode.GetBytes(input.ToInsecureString()),
-                entropy,
+                Entropy,
                 DataProtectionScope.CurrentUser);
 
             return Convert.ToBase64String(encryptedData);
@@ -79,15 +76,13 @@ namespace RedditAdMgr.Model
         public static SecureString DecryptString(this string encryptedData)
         {
             if (encryptedData == null)
-            {
                 return null;
-            }
 
             try
             {
                 var decryptedData = ProtectedData.Unprotect(
                     Convert.FromBase64String(encryptedData),
-                    entropy,
+                    Entropy,
                     DataProtectionScope.CurrentUser);
 
                 return Encoding.Unicode.GetString(decryptedData).ToSecureString();
@@ -101,16 +96,12 @@ namespace RedditAdMgr.Model
         public static SecureString ToSecureString(this IEnumerable<char> input)
         {
             if (input == null)
-            {
                 return null;
-            }
 
             var secure = new SecureString();
 
             foreach (var c in input)
-            {
                 secure.AppendChar(c);
-            }
 
             secure.MakeReadOnly();
             return secure;
@@ -119,9 +110,7 @@ namespace RedditAdMgr.Model
         public static string ToInsecureString(this SecureString input)
         {
             if (input == null)
-            {
                 return null;
-            }
 
             var ptr = Marshal.SecureStringToBSTR(input);
 

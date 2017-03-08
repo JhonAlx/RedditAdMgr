@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace RedditAdMgr.Model
+﻿namespace RedditAdMgr.Model
 {
-    class Advertisement
+    internal class Advertisement
     {
         public int AdvertisementNumber { get; set; }
         public string ThumbnailName { get; set; }

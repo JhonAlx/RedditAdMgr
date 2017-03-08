@@ -1,7 +1,7 @@
-﻿<Controls:MetroWindow xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"   x:Class="RedditAdMgr.MainForm"
+﻿<controls:MetroWindow xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"   x:Class="RedditAdMgr.MainForm"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:Controls="http://metro.mahapps.com/winfx/xaml/controls" 
+        xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls" 
         Title="Reddit Ad Manager" Height="500" Width="600" IsMaxRestoreButtonEnabled="False" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
     <Grid>
         <Grid.RowDefinitions>
@@ -86,4 +86,5 @@
             </Grid>
         </Grid>
     </Grid>
-</Controls:MetroWindow>
+</controls:MetroWindow>
+

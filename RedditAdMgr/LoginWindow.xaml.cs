@@ -1,22 +1,18 @@
-﻿using MahApps.Metro.Controls;
-using System;
-using System.IO;
+﻿using System;
 using System.Net;
 using System.Text;
 using System.Threading;
-using System.Windows;
 using System.Threading.Tasks;
+using System.Windows;
 using RedditAdMgr.Model;
 
 namespace RedditAdMgr
 {
     /// <summary>
-    /// Interaction logic for LoginWindow.xaml
+    ///     Interaction logic for LoginWindow.xaml
     /// </summary>
-    public partial class LoginWindow : MetroWindow
+    public partial class LoginWindow
     {
-        internal CookieContainer cookies { get; set; }
-
         public LoginWindow()
         {
             InitializeComponent();
@@ -37,9 +33,12 @@ namespace RedditAdMgr
             LoginProgressBar.Visibility = Visibility.Hidden;
 
 
-            if (!string.IsNullOrEmpty(Configuration.Instance.Username) && !string.IsNullOrEmpty(Configuration.Instance.Password))
+            if (!string.IsNullOrEmpty(Configuration.Instance.Username) &&
+                !string.IsNullOrEmpty(Configuration.Instance.Password))
                 RememberPasswordCheckBox.IsChecked = true;
         }
+
+        internal CookieContainer Cookies { get; set; }
 
         private void SubmitButton_Click(object sender, RoutedEventArgs e)
         {
@@ -51,7 +50,7 @@ namespace RedditAdMgr
             {
                 var taskScheduler = TaskScheduler.FromCurrentSynchronizationContext();
                 var ct = new CancellationToken();
-                string c = string.Empty;
+                var c = string.Empty;
                 string username = UserNameTextBox.Text, password = PasswordTextBox.Password;
 
                 SubmitButton.IsEnabled = false;
@@ -60,65 +59,67 @@ namespace RedditAdMgr
                 LoginProgressLabel.Visibility = Visibility.Visible;
                 LoginProgressLabel.Content = "Logging into Reddit...";
 
-                Task.Factory.StartNew(() => Login(username, password, out c)).
+                Task.Factory.StartNew(() => Login(username, password, out c), ct).
                     ContinueWith(w =>
-                   {
-                       SubmitButton.IsEnabled = true;
-                       LoginProgressBar.Visibility = Visibility.Hidden;
-                       LoginProgressLabel.Visibility = Visibility.Hidden;
+                        {
+                            SubmitButton.IsEnabled = true;
+                            LoginProgressBar.Visibility = Visibility.Hidden;
+                            LoginProgressLabel.Visibility = Visibility.Hidden;
 
-                       if (c.Contains("reddit_session"))
-                       {
-                           MessageBoxResult result = MessageBox.Show("Logged in!", "Success", MessageBoxButton.OK);
+                            if (c.Contains("reddit_session"))
+                            {
+                                var result = MessageBox.Show("Logged in!", "Success", MessageBoxButton.OK);
 
-                           cookies = new CookieContainer();
+                                Cookies = new CookieContainer();
 
-                           cookies.SetCookies(new Uri("http://reddit.com"), c);
+                                Cookies.SetCookies(new Uri("http://reddit.com"), c);
 
-                           if (RememberPasswordCheckBox.IsChecked == true)
-                           {
-                               Configuration.Instance.Username = UserNameTextBox.Text;
-                               Configuration.Instance.Password = PasswordTextBox.Password;
+                                if (RememberPasswordCheckBox.IsChecked == true)
+                                {
+                                    Configuration.Instance.Username = UserNameTextBox.Text;
+                                    Configuration.Instance.Password = PasswordTextBox.Password;
 
-                               Configuration.Instance.Save();
-                           }
+                                    Configuration.Instance.Save();
+                                }
 
-                           if (result == MessageBoxResult.OK)
-                           {
-                               MainForm main = new MainForm();
-                               main.Cookies = cookies;
-                               App.Current.MainWindow = main;
-                               Close();
-                               main.Show();
-                           }
-                       }
-                       else
-                           MessageBox.Show("Incorrect credentials, please try again!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                   },
-                   ct,
-                   TaskContinuationOptions.None, taskScheduler);
+                                if (result == MessageBoxResult.OK)
+                                {
+                                    var main = new MainForm {Cookies = Cookies};
+                                    Application.Current.MainWindow = main;
+                                    Close();
+                                    main.Show();
+                                }
+                            }
+                            else
+                            {
+                                MessageBox.Show("Incorrect credentials, please try again!", "Error", MessageBoxButton.OK,
+                                    MessageBoxImage.Error);
+                            }
+                        },
+                        ct,
+                        TaskContinuationOptions.None, taskScheduler);
             }
         }
 
         private void Login(string username, string password, out string cookie)
         {
-            string loginUrl = "https://www.reddit.com/api/login/";
-            string loginParams = string.Format("op=login&user={0}&passwd={1}&api_type=json", username, password);
+            var loginUrl = "https://www.reddit.com/api/login/";
+            string loginParams = $"op=login&user={username}&passwd={password}&api_type=json";
 
-            HttpWebRequest loginRequest = WebRequest.Create(loginUrl) as HttpWebRequest;
+            var loginRequest = WebRequest.Create(loginUrl) as HttpWebRequest;
             loginRequest.ContentType = "application/x-www-form-urlencoded";
             loginRequest.Method = "POST";
 
-            byte[] bytes = Encoding.ASCII.GetBytes(loginParams);
+            var bytes = Encoding.ASCII.GetBytes(loginParams);
 
             loginRequest.ContentLength = bytes.Length;
 
-            using (Stream os = loginRequest.GetRequestStream())
+            using (var os = loginRequest.GetRequestStream())
             {
                 os.Write(bytes, 0, bytes.Length);
             }
 
-            HttpWebResponse response = loginRequest.GetResponse() as HttpWebResponse;
+            var response = loginRequest.GetResponse() as HttpWebResponse;
             cookie = response.Headers["set-cookie"];
         }
     }
