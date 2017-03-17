@@ -4,7 +4,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using Polly.Retry;
 using RedditAdMgr.Model;
+using Polly;
 
 namespace RedditAdMgr
 {
@@ -13,6 +15,8 @@ namespace RedditAdMgr
     /// </summary>
     public partial class LoginWindow
     {
+        private static RetryPolicy _retryPolicy;
+
         public LoginWindow()
         {
             InitializeComponent();
@@ -53,13 +57,23 @@ namespace RedditAdMgr
                 var c = string.Empty;
                 string username = UserNameTextBox.Text, password = PasswordTextBox.Password;
 
+                _retryPolicy = Policy
+                        .Handle<WebException>()
+                        .WaitAndRetry(
+                            3,
+                            retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                            (ex, i) =>
+                            {
+                                MessageBox.Show("Caught web exception! retrying in a moment...");
+                            });
+
                 SubmitButton.IsEnabled = false;
                 LoginProgressBar.Visibility = Visibility.Visible;
                 LoginProgressBar.IsIndeterminate = true;
                 LoginProgressLabel.Visibility = Visibility.Visible;
                 LoginProgressLabel.Content = "Logging into Reddit...";
 
-                Task.Factory.StartNew(() => Login(username, password, out c), ct).
+                _retryPolicy.Execute(() => Task.Factory.StartNew(() => Login(username, password, out c), ct).
                     ContinueWith(w =>
                         {
                             SubmitButton.IsEnabled = true;
@@ -97,16 +111,18 @@ namespace RedditAdMgr
                             }
                         },
                         ct,
-                        TaskContinuationOptions.None, taskScheduler);
+                        TaskContinuationOptions.None, taskScheduler));
             }
         }
 
         private void Login(string username, string password, out string cookie)
         {
+
             var loginUrl = "https://www.reddit.com/api/login/";
             string loginParams = $"op=login&user={username}&passwd={password}&api_type=json";
 
             var loginRequest = WebRequest.Create(loginUrl) as HttpWebRequest;
+            // ReSharper disable once PossibleNullReferenceException
             loginRequest.ContentType = "application/x-www-form-urlencoded";
             loginRequest.Method = "POST";
 
@@ -120,6 +136,7 @@ namespace RedditAdMgr
             }
 
             var response = loginRequest.GetResponse() as HttpWebResponse;
+            // ReSharper disable once PossibleNullReferenceException
             cookie = response.Headers["set-cookie"];
         }
     }
