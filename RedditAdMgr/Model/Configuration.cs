@@ -11,7 +11,8 @@ namespace RedditAdMgr.Model
 {
     public class Configuration
     {
-        [XmlIgnore] public const string FileName = "Settings.xml";
+        [XmlIgnore]
+        public const string FileName = "Settings.xml";
 
         public string Password;
         public string Username;
@@ -19,18 +20,27 @@ namespace RedditAdMgr.Model
         [XmlIgnore]
         public static Configuration Instance { get; private set; }
 
+        /// <summary>
+        /// Load default values in case settings file cannot be read
+        /// </summary>
         private void SetDefaultValues()
         {
             Username = string.Empty;
             Password = string.Empty;
         }
 
+        /// <summary>
+        /// Set default values
+        /// </summary>
         public static void Default()
         {
             Instance = new Configuration();
             Instance.SetDefaultValues();
         }
 
+        /// <summary>
+        /// Load data from settings file
+        /// </summary>
         public static void Load()
         {
             var serializer = new XmlSerializer(typeof(Configuration));
@@ -43,6 +53,9 @@ namespace RedditAdMgr.Model
             Instance.Password = Instance.Password.DecryptString().ToInsecureString();
         }
 
+        /// <summary>
+        /// Save data to settings file
+        /// </summary>
         public void Save()
         {
             Password = Password.ToSecureString().EncryptString();

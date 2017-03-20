@@ -44,6 +44,11 @@ namespace RedditAdMgr
 
         internal CookieContainer Cookies { get; set; }
 
+        /// <summary>
+        /// Log into Reddit using specified credentials
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void SubmitButton_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(UserNameTextBox.Text) || string.IsNullOrEmpty(PasswordTextBox.Password))
@@ -115,6 +120,12 @@ namespace RedditAdMgr
             }
         }
 
+        /// <summary>
+        /// Get an authentication cookie from Reddit
+        /// </summary>
+        /// <param name="username">Reddit Username</param>
+        /// <param name="password">Reddit password</param>
+        /// <param name="cookie">String to hold the Cookie header</param>
         private void Login(string username, string password, out string cookie)
         {
 
